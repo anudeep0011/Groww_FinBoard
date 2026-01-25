@@ -1,0 +1,97 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Groww Brand Light Theme */
+
+    /* Background: Pure White */
+    --background: 0 0% 100%;
+    /* Foreground: Dark Gray for contrast */
+    --foreground: 215 25% 20%;
+
+    /* Card: White */
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 20%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 20%;
+
+    /* Primary: Groww Green */
+    --primary: 165 100% 41%;
+    --primary-foreground: 0 0% 0%;
+
+    /* Secondary: Groww Blue (Logo Blue) */
+    --secondary: 233 100% 66%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    /* Accent: Groww Blue variant or faint green? Let's use a faint blue based on secondary for hover states */
+    --accent: 233 100% 96%;
+    --accent-foreground: 233 100% 66%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 165 100% 41%;
+    --radius: 0.75rem;
+
+    /* Custom Chart colors matching logo */
+    --chart-1: 165 100% 41%;
+    /* Green */
+    --chart-2: 233 100% 66%;
+    /* Blue */
+    --chart-3: 197 37% 24%;
+    /* Dark Blue/Gray from text? or something distinct */
+  }
+
+  .dark {
+    /* Pure Black Theme */
+    --background: 0 0% 0%;
+    /* Pure Black */
+    --foreground: 0 0% 100%;
+
+    /* Cards slightly lighter to distinguish active areas, but still very dark */
+    --card: 0 0% 7%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 0 0% 5%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 165 100% 41%;
+    /* Original Vibrant Groww Green */
+    --primary-foreground: 0 0% 0%;
+
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 60%;
+
+    --accent: 165 100% 10%;
+    /* Dark Green accent background */
+    --accent-foreground: 165 100% 60%;
+
+    --destructive: 0 70% 40%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
+    --ring: 165 100% 41%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground transition-colors duration-300;
+  }
+}
