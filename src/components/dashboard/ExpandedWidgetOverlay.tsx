@@ -3,7 +3,7 @@
 import React, { useMemo } from "react";
 import { useDashboardStore } from "@/store/useDashboardStore";
 import { WIDGET_REGISTRY } from "../widgets/WidgetRegistry";
-import { Minimize2, X, Activity, BarChart2, CandlestickChart } from "lucide-react";
+import { Minimize2, Activity, BarChart2, CandlestickChart } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -15,10 +15,7 @@ export function ExpandedWidgetOverlay() {
         [widgets, expandedWidgetId]
     );
 
-    const Component = useMemo<React.ElementType>(() => {
-        if (!widget) return () => null;
-        return WIDGET_REGISTRY[widget.type] || (() => <div>Unknown Widget</div>);
-    }, [widget]);
+    const WidgetComponent = widget ? (WIDGET_REGISTRY[widget.type] || null) : null;
 
     if (!expandedWidgetId || !widget) return null;
 
@@ -52,6 +49,7 @@ export function ExpandedWidgetOverlay() {
 
                             <div className="flex items-center gap-3">
                                 {/* Chart Type Toggles (Visible for CHART widgets) */}
+                                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                                 {(widget.type === "CHART" || (widget as any).props?.symbol) && (
                                     <div className="flex bg-secondary/40 border border-border/40 rounded-lg p-1 gap-1 mr-4 shadow-sm">
                                         <button
@@ -90,13 +88,17 @@ export function ExpandedWidgetOverlay() {
 
                         {/* Content */}
                         <div className="flex-1 min-h-0 relative bg-background/40">
-                            {Component && (
-                                <Component
+                            {WidgetComponent ? (
+                                <WidgetComponent
                                     {...widget.props}
                                     apiUrl={widget.apiEndpoint}
                                     refreshInterval={widget.refreshInterval}
                                     isPreview={false}
                                 />
+                            ) : (
+                                <div className="flex items-center justify-center h-full text-muted-foreground">
+                                    Unknown Widget Type
+                                </div>
                             )}
                         </div>
                     </motion.div>

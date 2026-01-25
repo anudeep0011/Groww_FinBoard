@@ -12,7 +12,7 @@ export function EmptyState() {
                 Your dashboard is currently empty. Start by adding some widgets to track your favorite stocks and market data.
             </p>
             <div className="flex flex-col gap-2 text-sm text-muted-foreground/60">
-                <p>Tip: Click the "Add Widget" button below to get started.</p>
+                <p>Tip: Click the &quot;Add Widget&quot; button below to get started.</p>
             </div>
         </div>
     );

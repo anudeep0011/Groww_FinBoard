@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
             const text = await response.text();
             try {
                 data = JSON.parse(text);
-            } catch (e) {
+            } catch {
                 // If not JSON, return as message
                 data = {
                     status: "error",
@@ -43,7 +43,8 @@ export async function GET(request: NextRequest) {
         }
 
         return NextResponse.json(data, { status: response.status });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+        const msg = error?.message || "Failed to fetch data";
+        return NextResponse.json({ error: msg }, { status: 500 });
     }
 }

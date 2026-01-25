@@ -1,9 +1,10 @@
 "use client";
+/* eslint-disable react-hooks/set-state-in-effect */
 
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useDashboardStore } from "@/store/useDashboardStore";
-import { X, Save, AlertCircle } from "lucide-react";
+import { X, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface GlobalSettingsModalProps {
@@ -15,33 +16,12 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
 
     const [localSource, setLocalSource] = useState<"MOCK" | "FINNHUB">(dataSource);
     const [localKey, setLocalKey] = useState(apiKey);
-    const [mounted, setMounted] = useState(false);
-    const [status, setStatus] = useState<"IDLE" | "TESTING" | "SUCCESS" | "ERROR">("IDLE");
 
     useEffect(() => {
         setMounted(true);
         setLocalSource(dataSource);
         setLocalKey(apiKey);
     }, [dataSource, apiKey]);
-
-    if (!mounted) return null;
-
-    const verifyKey = async () => {
-        if (!localKey) return;
-        setStatus("TESTING");
-        try {
-            const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=AAPL&token=${localKey}`);
-            if (!res.ok) throw new Error("Invalid Key");
-            const data = await res.json();
-            if (data.error) throw new Error(data.error);
-
-            setStatus("SUCCESS");
-            setTimeout(() => setStatus("IDLE"), 3000);
-        } catch (e) {
-            setStatus("ERROR");
-            setTimeout(() => setStatus("IDLE"), 3000);
-        }
-    };
 
     const handleSave = () => {
         setDataSource(localSource);

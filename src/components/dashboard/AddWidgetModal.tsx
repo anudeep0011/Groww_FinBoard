@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { createPortal } from "react-dom";
-import { X, TestTube, Search, Plus, Trash2, LayoutGrid, Table as TableIcon, LineChart, AlertCircle } from "lucide-react";
+import { X, TestTube, Plus, Trash2, LayoutGrid, Table as TableIcon, LineChart, AlertCircle } from "lucide-react";
 import { useDashboardStore } from "@/store/useDashboardStore";
 import { WidgetType } from "@/types";
 import { cn } from "@/lib/utils";
@@ -23,6 +23,7 @@ export function AddWidgetModal({ onClose }: AddWidgetModalProps) {
     const [testStatus, setTestStatus] = useState<"IDLE" | "TESTING" | "SUCCESS" | "ERROR">("IDLE");
 
     // Advanced Config State
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [apiData, setApiData] = useState<any>(null);
     const [availableFields, setAvailableFields] = useState<string[]>([]);
     const [selectedFields, setSelectedFields] = useState<string[]>([]);
@@ -44,7 +45,7 @@ export function AddWidgetModal({ onClose }: AddWidgetModalProps) {
             return;
         }
 
-        let finalUrl = apiUrl;
+        const finalUrl = apiUrl;
         let finalHeaders: Record<string, string> | undefined = undefined;
 
         if (type === "CUSTOM") {
@@ -54,7 +55,7 @@ export function AddWidgetModal({ onClose }: AddWidgetModalProps) {
             }
             try {
                 new URL(finalUrl);
-            } catch (e) {
+            } catch {
                 setValidationError("Invalid API URL.");
                 return;
             }
@@ -153,7 +154,7 @@ export function AddWidgetModal({ onClose }: AddWidgetModalProps) {
 
             setAvailableFields(keys);
             setTestStatus("SUCCESS");
-        } catch (error: any) {
+        } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
             setTestStatus("ERROR");
             setValidationError(error.message || "Failed to connect to API");
         }

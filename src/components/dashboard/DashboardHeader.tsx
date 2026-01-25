@@ -1,14 +1,13 @@
 "use client";
 
-import React, { useRef } from "react";
+import React from "react";
 import { useDashboardStore } from "@/store/useDashboardStore";
-import { Download, Upload, LayoutTemplate } from "lucide-react";
-import { DashboardState } from "@/types";
+import { Download, LayoutTemplate } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 
 export function DashboardHeader() {
     const { widgets, theme, dataSource, importDashboard, switchTemplate, activeTemplate } = useDashboardStore();
-    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleExport = () => {
         const config = {
@@ -30,38 +29,7 @@ export function DashboardHeader() {
         URL.revokeObjectURL(url);
     };
 
-    const handleImportClick = () => {
-        fileInputRef.current?.click();
-    };
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            try {
-                const content = event.target?.result as string;
-                const config = JSON.parse(content);
-
-                // Basic validation
-                if (!config.widgets || !Array.isArray(config.widgets)) {
-                    alert("Invalid configuration file format.");
-                    return;
-                }
-
-                if (confirm("Importing will overwrite your current layout. Continue?")) {
-                    importDashboard(config as Partial<DashboardState>);
-                }
-            } catch (err) {
-                console.error("Import failed", err);
-                alert("Failed to parse configuration file.");
-            }
-            // Reset input
-            if (fileInputRef.current) fileInputRef.current.value = "";
-        };
-        reader.readAsText(file);
-    };
 
     return (
         <header className="px-6 py-4 flex items-center justify-between bg-card/80 backdrop-blur-md border-b border-border/40 sticky top-0 z-40 shadow-sm">
@@ -154,13 +122,7 @@ export function DashboardHeader() {
 
             <div className="h-4 w-px bg-border/50 mx-1"></div>
 
-            <input
-                type="file"
-                ref={fileInputRef}
-                className="hidden"
-                accept=".json"
-                onChange={handleFileChange}
-            />
+
 
             <button
                 onClick={handleExport}

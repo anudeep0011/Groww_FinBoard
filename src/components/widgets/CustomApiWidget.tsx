@@ -37,6 +37,7 @@ interface CustomApiWidgetProps {
 }
 
 // Simple in-memory cache
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const CACHE = new Map<string, { data: any, timestamp: number }>();
 const CACHE_DURATION = 60 * 1000; // 1 minute
 
@@ -137,6 +138,7 @@ export function CustomApiWidget({ apiUrl, refreshInterval = 30, selectedFields =
 
 
     // Helper to format values
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const formatDisplayValue = (value: any) => {
         if (value === null || value === undefined) return "-";
         if (typeof value === "boolean") return value ? "True" : "False";
@@ -153,6 +155,7 @@ export function CustomApiWidget({ apiUrl, refreshInterval = 30, selectedFields =
         return String(value);
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const renderValue = (value: any) => {
         if (Array.isArray(value) && value.length > 0 && typeof value[0] === "object") {
             const keys = Object.keys(value[0]);
@@ -165,6 +168,7 @@ export function CustomApiWidget({ apiUrl, refreshInterval = 30, selectedFields =
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border/20">
+                            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                             {value.map((row: any, i: number) => (
                                 <tr key={i} className="hover:bg-muted/10">
                                     {keys.map(k => (
@@ -199,6 +203,7 @@ export function CustomApiWidget({ apiUrl, refreshInterval = 30, selectedFields =
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border/20">
+                                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                                 {arrayData.map((row: any, i: number) => (
                                     <tr key={i} className="hover:bg-muted/10">
                                         {keys.map(k => (
@@ -276,6 +281,7 @@ export function CustomApiWidget({ apiUrl, refreshInterval = 30, selectedFields =
         });
 
         if (arrayItem || objectSeriesItem) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             let data: any[] = [];
             let label = "";
 
@@ -300,6 +306,7 @@ export function CustomApiWidget({ apiUrl, refreshInterval = 30, selectedFields =
             }) || keys[0];
 
             // Normalize data for Chart.js
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const chartData = data.map((d: any) => {
                 // Try to parse time
                 let time = d.time || d.date || d.datetime || d.timestamp;

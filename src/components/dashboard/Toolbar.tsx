@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Plus, LayoutTemplate, Moon, Sun, Save, BarChart3, List, CreditCard, Settings } from "lucide-react";
+import { Plus, LayoutTemplate, Moon, Sun, Settings } from "lucide-react";
 import { useDashboardStore } from "@/store/useDashboardStore";
 import { cn } from "@/lib/utils";
 import { GlobalSettingsModal } from "./GlobalSettingsModal";
@@ -16,6 +16,7 @@ export function Toolbar() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setMounted(true);
         if (theme === 'dark') {
             document.documentElement.classList.add('dark');

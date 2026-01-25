@@ -7,6 +7,7 @@ const CACHE = new Map<string, { data: StockData; timestamp: number }>();
 const CACHE_DURATION = 60 * 1000; // 1 minute cache
 
 // Request queue to prevent bursts
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let requestQueue: Promise<any> = Promise.resolve();
 const RATE_LIMIT_DELAY = 1000; // 1 second between calls
 

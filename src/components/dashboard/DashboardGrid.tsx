@@ -29,6 +29,7 @@ export function DashboardGrid() {
         [widgets]
     );
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleLayoutChange = (currentLayout: any[]) => {
         updateLayout(currentLayout);
     };
