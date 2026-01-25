@@ -16,6 +16,7 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
 
     const [localSource, setLocalSource] = useState<"MOCK" | "FINNHUB">(dataSource);
     const [localKey, setLocalKey] = useState(apiKey);
+    const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
         setMounted(true);

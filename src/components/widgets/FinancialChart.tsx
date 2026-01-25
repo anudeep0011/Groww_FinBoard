@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
-import { createChart, ColorType, IChartApi } from "lightweight-charts";
+import { createChart, ColorType, IChartApi, CandlestickSeries, AreaSeries } from "lightweight-charts";
 
 interface FinancialChartProps {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -68,8 +68,7 @@ export function FinancialChart({ data, colors = {} }: FinancialChartProps) {
             const isCandle = "open" in firstItem && "high" in firstItem && "low" in firstItem && "close" in firstItem;
 
             if (isCandle) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const candlestickSeries = (chart as any).addCandlestickSeries({
+                const candlestickSeries = chart.addSeries(CandlestickSeries, {
                     upColor: '#26a69a',
                     downColor: '#ef5350',
                     borderVisible: false,
@@ -79,8 +78,7 @@ export function FinancialChart({ data, colors = {} }: FinancialChartProps) {
                 candlestickSeries.setData(data);
                 chart.timeScale().fitContent();
             } else {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const areaSeries = (chart as any).addAreaSeries({
+                const areaSeries = chart.addSeries(AreaSeries, {
                     lineColor,
                     topColor: areaTopColor,
                     bottomColor: areaBottomColor,
