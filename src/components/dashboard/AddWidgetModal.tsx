@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { createPortal } from "react-dom";
-import { X, TestTube, Search, Plus, Trash2, LayoutGrid, Table as TableIcon, LineChart } from "lucide-react";
+import { X, TestTube, Search, Plus, Trash2, LayoutGrid, Table as TableIcon, LineChart, AlertCircle } from "lucide-react";
 import { useDashboardStore } from "@/store/useDashboardStore";
 import { WidgetType } from "@/types";
 import { cn } from "@/lib/utils";
@@ -16,12 +16,11 @@ export function AddWidgetModal({ onClose }: AddWidgetModalProps) {
     const { addWidget } = useDashboardStore();
 
     // Form State
-    const [name, setName] = useState("Apple Inc.");
-    const [type, setType] = useState<WidgetType>("CHART");
-    const [apiUrl, setApiUrl] = useState("https://api.coinbase.com/v2/exchange-rates?currency=BTC");
+    const [name, setName] = useState("");
+    const [type] = useState<WidgetType>("CUSTOM");
+    const [apiUrl, setApiUrl] = useState("");
     const [refreshInterval, setRefreshInterval] = useState(30);
     const [testStatus, setTestStatus] = useState<"IDLE" | "TESTING" | "SUCCESS" | "ERROR">("IDLE");
-    const [stockSymbol, setStockSymbol] = useState("AAPL"); // New state for Stock Chart symbol
 
     // Advanced Config State
     const [apiData, setApiData] = useState<any>(null);
@@ -31,45 +30,132 @@ export function AddWidgetModal({ onClose }: AddWidgetModalProps) {
     const [fieldSearch, setFieldSearch] = useState("");
     const [showArraysOnly, setShowArraysOnly] = useState(false);
 
-    // Handlers
-    const handleAdd = () => {
-        const widgetProps: any = {};
+    // Generic Headers State
+    const [customHeaders, setCustomHeaders] = useState<{ key: string, value: string }[]>([]);
 
-        if (type === "CHART") {
-            widgetProps.symbol = stockSymbol;
-        } else if (type === "CUSTOM") {
-            widgetProps.apiUrl = apiUrl;
-            widgetProps.refreshInterval = refreshInterval;
-            widgetProps.selectedFields = selectedFields;
-            widgetProps.displayMode = displayMode;
+    // Handlers
+    const [validationError, setValidationError] = useState("");
+
+    const handleAdd = () => {
+        setValidationError("");
+
+        if (!name.trim()) {
+            setValidationError("Please enter a widget name.");
+            return;
         }
 
-        addWidget({
-            title: name || "New Widget",
+        let finalUrl = apiUrl;
+        let finalHeaders: Record<string, string> | undefined = undefined;
+
+        if (type === "CUSTOM") {
+            if (!finalUrl) {
+                setValidationError("Please enter the API URL.");
+                return;
+            }
+            try {
+                new URL(finalUrl);
+            } catch (e) {
+                setValidationError("Invalid API URL.");
+                return;
+            }
+
+            // Generic Headers
+            if (customHeaders.length > 0) {
+                const headerObj: Record<string, string> = {};
+                customHeaders.forEach(h => {
+                    if (h.key && h.value) headerObj[h.key] = h.value;
+                });
+                if (Object.keys(headerObj).length > 0) {
+                    finalHeaders = headerObj;
+                }
+            }
+        }
+
+        if (selectedFields.length === 0 && type === "CUSTOM") {
+            setValidationError("Please select at least one field to display.");
+            return;
+        }
+
+        const newWidget = {
             type: type,
-            props: widgetProps,
-            apiEndpoint: type === "CUSTOM" ? apiUrl : undefined,
-            refreshInterval: refreshInterval
-        });
+            title: name,
+            apiEndpoint: type === "CUSTOM" ? finalUrl : undefined,
+            refreshInterval: refreshInterval,
+            formatting: {
+                type: 'none' as const,
+                decimals: 2
+            },
+            props: {
+                symbol: type === "CHART" || type === "CARD" ? "AAPL" : undefined,
+                chartType: type === "CHART" ? "AREA" : undefined,
+                selectedFields: selectedFields,
+                headers: finalHeaders,
+                displayMode: displayMode
+            }
+        };
+
+        addWidget(newWidget);
         onClose();
     };
 
     const handleTestApi = async () => {
         if (!apiUrl) return;
+
         setTestStatus("TESTING");
+        setValidationError(""); // Clear previous errors
         try {
-            const res = await fetch(apiUrl);
-            if (!res.ok) throw new Error("Failed");
+            const headers: Record<string, string> = {};
+            // Add custom headers
+            customHeaders.forEach(h => {
+                if (h.key && h.value) headers[h.key] = h.value;
+            });
+
+            let fetchUrl = apiUrl;
+            // Use proxy for Indian Stock API to handle CORS and User-Agent
+            if (apiUrl.includes("stock.indianapi.in")) {
+                fetchUrl = `/api/proxy?url=${encodeURIComponent(apiUrl)}`;
+            }
+
+            const res = await fetch(fetchUrl, { headers });
+            if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
             const data = await res.json();
+
+            // Strict Error Detection
+            if (data.status === "error" || data.Status === "Error") {
+                const msg = data.message || data.Message || "API returned an error status.";
+                if (msg.toLowerCase().includes("apikey")) {
+                    throw new Error("Invalid API Key. Please check your key.");
+                }
+                throw new Error(msg);
+            }
+            if (data.code && typeof data.code === "number" && data.code >= 400) {
+                const msg = data.message || `API Error Code: ${data.code}`;
+                if (data.code === 401 || msg.toLowerCase().includes("apikey")) {
+                    throw new Error("Invalid API Key. Please check your key.");
+                }
+                throw new Error(msg);
+            }
+            if (data["Error Message"] || data["Note"] || data["Information"]) {
+                const msg = data["Error Message"] || data["Note"] || data["Information"];
+                if (msg.toLowerCase().includes("apikey") || msg.toLowerCase().includes("invalid api key")) {
+                    throw new Error("Invalid API Key. Please check your key.");
+                }
+                throw new Error(msg);
+            }
 
             setApiData(data);
             const flattened = flattenObject(data);
-            setAvailableFields(Object.keys(flattened));
+            const keys = Object.keys(flattened);
 
+            if (keys.length === 0) {
+                throw new Error("API returned empty data object.");
+            }
+
+            setAvailableFields(keys);
             setTestStatus("SUCCESS");
-        } catch (e) {
+        } catch (error: any) {
             setTestStatus("ERROR");
-            setTimeout(() => setTestStatus("IDLE"), 2000);
+            setValidationError(error.message || "Failed to connect to API");
         }
     };
 
@@ -104,33 +190,6 @@ export function AddWidgetModal({ onClose }: AddWidgetModalProps) {
                 {/* Body - Scrollable */}
                 <div className="p-6 space-y-5 overflow-y-auto min-h-0 custom-scrollbar">
 
-                    {/* Widget Type Selection */}
-                    <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-slate-400">Widget Type</label>
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() => { setType("CHART"); setName("Apple Inc."); }}
-                                className={cn(
-                                    "flex-1 px-4 py-3 rounded-lg border flex flex-col items-center gap-2 transition-all",
-                                    type === "CHART" ? "bg-primary/20 border-primary text-primary" : "bg-slate-900 border-slate-700 text-slate-400 hover:bg-slate-800"
-                                )}
-                            >
-                                <LineChart className="w-6 h-6" />
-                                <span className="text-sm font-medium">Stock Chart</span>
-                            </button>
-                            <button
-                                onClick={() => { setType("CUSTOM"); setName("Bitcoin Price"); }}
-                                className={cn(
-                                    "flex-1 px-4 py-3 rounded-lg border flex flex-col items-center gap-2 transition-all",
-                                    type === "CUSTOM" ? "bg-primary/20 border-primary text-primary" : "bg-slate-900 border-slate-700 text-slate-400 hover:bg-slate-800"
-                                )}
-                            >
-                                <TestTube className="w-6 h-6" />
-                                <span className="text-sm font-medium">Custom API</span>
-                            </button>
-                        </div>
-                    </div>
-
                     {/* Widget Name */}
                     <div className="space-y-1.5">
                         <label className="text-xs font-medium text-slate-400">Widget Name</label>
@@ -138,62 +197,94 @@ export function AddWidgetModal({ onClose }: AddWidgetModalProps) {
                             type="text"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            placeholder={type === "CHART" ? "e.g., Apple Inc." : "e.g., Bitcoin Price"}
+                            placeholder="e.g., Bitcoin Price"
                             className="w-full h-10 px-3 bg-slate-900 border border-slate-700 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-slate-100 placeholder-slate-500"
                         />
                     </div>
 
-                    {/* CHART Config */}
-                    {type === "CHART" && (
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-medium text-slate-400">Stock Symbol</label>
-                            <input
-                                type="text"
-                                // Reuse apiUrl state for symbol to save lines or make new state? Let's assume user types symbol here.
-                                // Actually better to use a dedicated state or reuse name if we parse it.
-                                // Let's use apiUrl as a temp holder for Symbol for now or add new state?
-                                // To be safe, let's hardcode to AAPL in logic or add a small input.
-                                // For this demo, let's just use 'name' as title and add a specific Symbol Input.
-                                placeholder="AAPL"
-                                value={stockSymbol}
-                                onChange={(e) => setStockSymbol(e.target.value.toUpperCase())}
-                                className="w-full h-10 px-3 bg-slate-900 border border-slate-700 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-slate-100"
-                            />
-                            <p className="text-[10px] text-slate-500">Enter stock symbol (e.g. AAPL, GOOGL, MSFT)</p>
-                        </div>
-                    )}
-
                     {/* CUSTOM Config */}
                     {type === "CUSTOM" && (
                         <>
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-medium text-slate-400">API URL</label>
-                                <div className="flex gap-2">
+                            <div className="space-y-3">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-medium text-slate-400">API URL</label>
                                     <input
                                         type="text"
                                         value={apiUrl}
                                         onChange={(e) => setApiUrl(e.target.value)}
                                         placeholder="https://api.example.com/data"
-                                        className="flex-1 h-10 px-3 bg-slate-900 border border-slate-700 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-slate-100 font-mono"
+                                        className="w-full h-10 px-3 bg-slate-900 border border-slate-700 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-slate-100 font-mono"
                                     />
-                                    <button
-                                        onClick={handleTestApi}
-                                        disabled={!apiUrl || testStatus === "TESTING"}
-                                        className={cn(
-                                            "px-4 h-10 text-xs font-medium rounded-md border border-slate-700 transition-colors flex items-center gap-2",
-                                            testStatus === "SUCCESS" ? "bg-primary text-white border-primary" :
-                                                "bg-green-600 hover:bg-green-700 text-white border-transparent"
-                                        )}
-                                    >
-                                        {testStatus === "TESTING" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <TestTube className="w-3.5 h-3.5" />}
-                                        {testStatus === "TESTING" ? "Testing" : "Test"}
-                                    </button>
+                                    <p className="text-[10px] text-slate-500">Enter the full API URL (including query parameters)</p>
                                 </div>
 
+                                {/* Custom Headers Section */}
+                                <div className="pt-2">
+                                    <div className="flex items-center justify-between mb-1.5">
+                                        <label className="text-xs font-medium text-slate-400">Headers (Optional)</label>
+                                        <button
+                                            onClick={() => setCustomHeaders([...customHeaders, { key: "", value: "" }])}
+                                            className="text-[10px] text-primary hover:text-primary/80 flex items-center gap-1"
+                                        >
+                                            <Plus className="w-3 h-3" /> Add Header
+                                        </button>
+                                    </div>
+                                    <div className="space-y-2">
+                                        {customHeaders.map((header, index) => (
+                                            <div key={index} className="flex gap-2 animate-in slide-in-from-top-1 fade-in">
+                                                <input
+                                                    type="text"
+                                                    value={header.key}
+                                                    onChange={(e) => {
+                                                        const newHeaders = [...customHeaders];
+                                                        newHeaders[index].key = e.target.value;
+                                                        setCustomHeaders(newHeaders);
+                                                    }}
+                                                    placeholder="Key (e.g. X-Api-Key)"
+                                                    className="flex-1 h-8 px-2 bg-slate-900 border border-slate-700 rounded text-xs focus:outline-none focus:ring-1 focus:ring-primary text-slate-300 font-mono"
+                                                />
+                                                <input
+                                                    type="text"
+                                                    value={header.value}
+                                                    onChange={(e) => {
+                                                        const newHeaders = [...customHeaders];
+                                                        newHeaders[index].value = e.target.value;
+                                                        setCustomHeaders(newHeaders);
+                                                    }}
+                                                    placeholder="Value"
+                                                    className="flex-1 h-8 px-2 bg-slate-900 border border-slate-700 rounded text-xs focus:outline-none focus:ring-1 focus:ring-primary text-slate-300 font-mono"
+                                                />
+                                                <button
+                                                    onClick={() => {
+                                                        const newHeaders = customHeaders.filter((_, i) => i !== index);
+                                                        setCustomHeaders(newHeaders);
+                                                    }}
+                                                    className="p-1 text-slate-500 hover:text-red-400 transition-colors"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={handleTestApi}
+                                    disabled={!apiUrl || testStatus === "TESTING"}
+                                    className={cn(
+                                        "w-full h-9 text-xs font-medium rounded-md border border-slate-700 transition-colors flex items-center justify-center gap-2",
+                                        testStatus === "SUCCESS" ? "bg-primary text-white border-primary" :
+                                            "bg-green-600 hover:bg-green-700 text-white border-transparent"
+                                    )}
+                                >
+                                    {testStatus === "TESTING" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <TestTube className="w-3.5 h-3.5" />}
+                                    {testStatus === "TESTING" ? "Testing Connection..." : "Test Connection"}
+                                </button>
+
                                 {testStatus === "SUCCESS" && (
-                                    <div className="text-[11px] text-green-400 flex items-center gap-1.5 bg-green-500/10 px-3 py-2 rounded border border-green-500/20 mt-2">
+                                    <div className="text-[11px] text-green-400 flex items-center gap-1.5 bg-green-500/10 px-3 py-2 rounded border border-green-500/20">
                                         <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                                        API connection successful! {Object.keys(apiData || {}).length} fields found.
+                                        Connection successful! {Object.keys(apiData || {}).length} fields found.
                                     </div>
                                 )}
                             </div>
@@ -312,8 +403,14 @@ export function AddWidgetModal({ onClose }: AddWidgetModalProps) {
 
                         </div>
                     )}
-
                 </div>
+
+                {validationError && (
+                    <div className="px-6 py-2 bg-red-500/10 border-t border-red-500/20 text-red-400 text-xs font-medium flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4" />
+                        {validationError}
+                    </div>
+                )}
 
                 {/* Footer */}
                 <div className="p-6 border-t border-slate-800 flex justify-end gap-3 shrink-0 bg-[#0f172a]">

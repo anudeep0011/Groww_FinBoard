@@ -90,7 +90,14 @@ export function ExpandedWidgetOverlay() {
 
                         {/* Content */}
                         <div className="flex-1 min-h-0 relative bg-background/40">
-                            {Component && <Component {...widget.props} isPreview={false} />}
+                            {Component && (
+                                <Component
+                                    {...widget.props}
+                                    apiUrl={widget.apiEndpoint}
+                                    refreshInterval={widget.refreshInterval}
+                                    isPreview={false}
+                                />
+                            )}
                         </div>
                     </motion.div>
                 </motion.div>

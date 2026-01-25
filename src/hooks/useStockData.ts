@@ -29,7 +29,7 @@ const getRangeParams = (range: "1D" | "1W" | "1M" | "1Y") => {
     return { resolution, from, to };
 };
 
-export function useStockData(symbol: string, range: "1D" | "1W" | "1M" | "1Y" = "1M", refreshInterval: number = 5000) {
+export function useStockData(symbol: string, range: "1D" | "1W" | "1M" | "1Y" = "1M", refreshInterval: number = 60000) {
     const { resolution, from, to } = getRangeParams(range);
 
     // Pass params as array key to SWR to trigger re-fetch on change

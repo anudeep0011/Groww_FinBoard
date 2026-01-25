@@ -90,7 +90,12 @@ export function WidgetWrapper({ widget }: WidgetWrapperProps) {
             {/* Content Area */}
             <div className="flex-1 min-h-0 relative overflow-hidden">
                 {Component ? (
-                    <Component {...widget.props} isPreview={true} />
+                    <Component
+                        {...widget.props}
+                        apiUrl={widget.apiEndpoint}
+                        refreshInterval={widget.refreshInterval}
+                        isPreview={true}
+                    />
                 ) : (
                     <div className="p-4 text-red-500">Unknown Widget Type: {widget.type}</div>
                 )}

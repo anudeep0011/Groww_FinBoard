@@ -4,50 +4,57 @@
 
 @layer base {
   :root {
-    /* Groww Brand Light Theme */
+    /* Deep Blended "Groww" Theme */
 
-    /* Background: Pure White */
-    --background: 0 0% 100%;
-    /* Foreground: Dark Gray for contrast */
-    --foreground: 215 25% 20%;
+    /* Background: Light Mint/Blue tint (less white) */
+    --background: 180 30% 96%;
+    /* Foreground: Deep Teal/Slate */
+    --foreground: 200 50% 15%;
 
-    /* Card: White */
+    /* Card: White with slight transparency for blending */
     --card: 0 0% 100%;
-    --card-foreground: 215 25% 20%;
+    --card-foreground: 200 50% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 20%;
+    --popover-foreground: 200 50% 15%;
 
-    /* Primary: Groww Green */
-    --primary: 165 100% 41%;
-    --primary-foreground: 0 0% 0%;
+    /* Primary: Strong Groww Blue */
+    --primary: 225 80% 55%;
+    --primary-foreground: 0 0% 100%;
 
-    /* Secondary: Groww Blue (Logo Blue) */
-    --secondary: 233 100% 66%;
+    /* Secondary: Strong Groww Green */
+    --secondary: 160 85% 40%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Muted: Blended Blue-Green Gray */
+    --muted: 190 30% 94%;
+    --muted-foreground: 200 30% 45%;
 
-    /* Accent: Groww Blue variant or faint green? Let's use a faint blue based on secondary for hover states */
-    --accent: 233 100% 96%;
-    --accent-foreground: 233 100% 66%;
+    /* Accent: Vibrant Cyan/Teal for interactions */
+    --accent: 170 60% 94%;
+    --accent-foreground: 160 90% 35%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 165 100% 41%;
+    --border: 190 25% 88%;
+    --input: 190 25% 88%;
+    --ring: 225 80% 55%;
     --radius: 0.75rem;
 
-    /* Custom Chart colors matching logo */
-    --chart-1: 165 100% 41%;
-    /* Green */
-    --chart-2: 233 100% 66%;
+    /* Custom Chart colors */
+    --chart-1: 225 80% 55%;
     /* Blue */
-    --chart-3: 197 37% 24%;
-    /* Dark Blue/Gray from text? or something distinct */
+    --chart-2: 160 85% 40%;
+    /* Green */
+    --chart-3: 180 40% 30%;
+    /* Deep Teal */
+  }
+
+  /* Pronounced Blue-Green Gradient */
+  :root body {
+    background-image: linear-gradient(135deg, hsl(210 60% 95%), hsl(150 50% 94%));
+    background-attachment: fixed;
   }
 
   .dark {
@@ -94,4 +101,12 @@
   body {
     @apply bg-background text-foreground transition-colors duration-300;
   }
+}
+
+/* Hide Next.js Dev Indicators/Toasts */
+nextjs-portal,
+[data-nextjs-toast],
+[data-nextjs-dialog-overlay],
+#next-route-announcer {
+  display: none !important;
 }

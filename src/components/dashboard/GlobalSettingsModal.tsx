@@ -93,32 +93,16 @@ export function GlobalSettingsModal({ onClose }: GlobalSettingsModalProps) {
                     {localSource === "FINNHUB" && (
                         <div className="space-y-1.5 animate-in slide-in-from-top-2 fade-in">
                             <label className="text-xs font-medium text-muted-foreground">Finnhub API Key</label>
-                            <div className="flex gap-2">
-                                <input
-                                    type="password"
-                                    value={localKey}
-                                    onChange={(e) => setLocalKey(e.target.value)}
-                                    placeholder="Enter your API key..."
-                                    className="flex-1 h-9 px-3 rounded-md border border-input bg-transparent text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-                                />
-                                <button
-                                    onClick={verifyKey}
-                                    disabled={status === "TESTING" || !localKey}
-                                    className={cn(
-                                        "px-3 h-9 text-xs font-medium rounded-md border transition-colors whitespace-nowrap",
-                                        status === "SUCCESS" ? "bg-green-500/10 text-green-500 border-green-500/20" :
-                                            status === "ERROR" ? "bg-destructive/10 text-destructive border-destructive/20" :
-                                                "bg-secondary hover:bg-secondary/80 border-transparent text-secondary-foreground"
-                                    )}
-                                >
-                                    {status === "TESTING" ? "..." :
-                                        status === "SUCCESS" ? "Valid" :
-                                            status === "ERROR" ? "Invalid" : "Verify"}
-                                </button>
-                            </div>
-                            <div className="flex gap-2 p-2 bg-accent/10 border border-accent/20 rounded-md text-xs text-muted-foreground">
-                                <AlertCircle className="w-4 h-4 text-accent shrink-0" />
-                                <p>Get a free API Key from <a href="https://finnhub.io/" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">finnhub.io</a>.</p>
+                            <div className="p-3 bg-muted/30 border border-border rounded-md text-xs text-muted-foreground">
+                                <p className="mb-1">
+                                    Using API key from environment variables.
+                                </p>
+                                <code className="block bg-black/10 dark:bg-white/10 p-1 rounded font-mono text-[10px]">
+                                    NEXT_PUBLIC_FINNHUB_API_KEY
+                                </code>
+                                <p className="mt-2 opacity-70">
+                                    To change, update your <span className="font-mono">.env.local</span> file.
+                                </p>
                             </div>
                         </div>
                     )}
