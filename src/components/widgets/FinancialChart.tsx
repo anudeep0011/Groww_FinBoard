@@ -67,7 +67,7 @@ export function FinancialChart({ data, colors = {} }: FinancialChartProps) {
             const isCandle = "open" in firstItem && "high" in firstItem && "low" in firstItem && "close" in firstItem;
 
             if (isCandle) {
-                const candlestickSeries = chart.addCandlestickSeries({
+                const candlestickSeries = (chart as any).addCandlestickSeries({
                     upColor: '#26a69a',
                     downColor: '#ef5350',
                     borderVisible: false,
@@ -77,7 +77,7 @@ export function FinancialChart({ data, colors = {} }: FinancialChartProps) {
                 candlestickSeries.setData(data);
                 chart.timeScale().fitContent();
             } else {
-                const areaSeries = chart.addAreaSeries({
+                const areaSeries = (chart as any).addAreaSeries({
                     lineColor,
                     topColor: areaTopColor,
                     bottomColor: areaBottomColor,
