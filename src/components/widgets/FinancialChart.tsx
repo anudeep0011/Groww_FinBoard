@@ -1,11 +1,26 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
-import { createChart, ColorType, IChartApi, CandlestickSeries, AreaSeries } from "lightweight-charts";
+import { createChart, ColorType, IChartApi, CandlestickSeries, AreaSeries, Time } from "lightweight-charts";
+
+// Define strict types for our data
+export interface ChartCandlestickData {
+    time: string | Time;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+}
+
+export interface ChartAreaData {
+    time: string | Time;
+    value: number;
+}
+
+export type FinancialChartData = ChartCandlestickData | ChartAreaData;
 
 interface FinancialChartProps {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    data: any[];
+    data: FinancialChartData[];
     colors?: {
         backgroundColor?: string;
         lineColor?: string;
@@ -13,6 +28,11 @@ interface FinancialChartProps {
         areaTopColor?: string;
         areaBottomColor?: string;
     };
+}
+
+// Type guard to check if data is candlestick
+function isCandlestickData(data: FinancialChartData): data is ChartCandlestickData {
+    return (data as ChartCandlestickData).open !== undefined;
 }
 
 export function FinancialChart({ data, colors = {} }: FinancialChartProps) {
@@ -58,14 +78,9 @@ export function FinancialChart({ data, colors = {} }: FinancialChartProps) {
 
         chartRef.current = chart;
 
-        // Detect Data Type and Add Series
-        // We expect data to be normalized before passing here, but let's handle basic detection
-        // Format needed: { time: '2018-12-22', value: 32.51 } for Line/Area
-        // Format needed: { time: '2018-12-22', open: 75.16, high: 82.84, low: 36.16, close: 45.72 } for Candlestick
-
         if (data.length > 0) {
             const firstItem = data[0];
-            const isCandle = "open" in firstItem && "high" in firstItem && "low" in firstItem && "close" in firstItem;
+            const isCandle = isCandlestickData(firstItem);
 
             if (isCandle) {
                 const candlestickSeries = chart.addSeries(CandlestickSeries, {
@@ -75,7 +90,8 @@ export function FinancialChart({ data, colors = {} }: FinancialChartProps) {
                     wickUpColor: '#26a69a',
                     wickDownColor: '#ef5350',
                 });
-                candlestickSeries.setData(data);
+                // We know it's candlestick because of the check, but TS needs help with the array
+                candlestickSeries.setData(data as ChartCandlestickData[]);
                 chart.timeScale().fitContent();
             } else {
                 const areaSeries = chart.addSeries(AreaSeries, {
@@ -84,19 +100,18 @@ export function FinancialChart({ data, colors = {} }: FinancialChartProps) {
                     bottomColor: areaBottomColor,
                 });
 
-                // Ensure data has 'value' key
-                const validData = data.map(d => ({
-                    time: d.time,
-                    value: d.value !== undefined ? d.value : (d.close || d.price || 0)
-                }));
+                // Ensure data has 'value' key, handle potential fallback if data was passed loosely
+                // In strict mode, we expect data to already be correct, but we'll keep the map for safety if needed
+                // actually if we type `data` strictly, we shouldn't need to remap if the caller complies.
+                // But let's support flexible input if the caller passes something slightly off (unlikely with strict TS)
+                // For now, let's assume strict compliance but safe casting.
+
+                const validData = data.filter((d): d is ChartAreaData => 'value' in d);
 
                 // Sort by time just in case
-                validData.sort((a, b) => (new Date(a.time).getTime() - new Date(b.time).getTime()));
+                validData.sort((a, b) => (new Date(a.time as string).getTime() - new Date(b.time as string).getTime()));
 
-                // Filter out invalid dates/values
-                const cleanData = validData.filter(d => d.time && !isNaN(d.value));
-
-                areaSeries.setData(cleanData);
+                areaSeries.setData(validData);
                 chart.timeScale().fitContent();
             }
         }

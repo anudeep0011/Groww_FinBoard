@@ -7,6 +7,11 @@ import { Minimize2, Activity, BarChart2, CandlestickChart } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
+// Helper type guard
+function hasSymbol(props: Record<string, unknown> | undefined): props is { symbol: string } & Record<string, unknown> {
+    return typeof props?.symbol === 'string';
+}
+
 export function ExpandedWidgetOverlay() {
     const { widgets, expandedWidgetId, toggleWidgetExpansion } = useDashboardStore();
 
@@ -49,8 +54,7 @@ export function ExpandedWidgetOverlay() {
 
                             <div className="flex items-center gap-3">
                                 {/* Chart Type Toggles (Visible for CHART widgets) */}
-                                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                                {(widget.type === "CHART" || (widget as any).props?.symbol) && (
+                                {(widget.type === "CHART" || hasSymbol(widget.props)) && (
                                     <div className="flex bg-secondary/40 border border-border/40 rounded-lg p-1 gap-1 mr-4 shadow-sm">
                                         <button
                                             onClick={() => useDashboardStore.getState().updateWidget(widget.id, { props: { ...widget.props, chartType: "AREA" } })}
