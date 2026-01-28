@@ -3,11 +3,20 @@ const nextConfig = {
     async headers() {
         return [
             {
-                source: "/(.*)",
+                source: "/:path*",
                 headers: [
                     {
                         key: "Cross-Origin-Opener-Policy",
-                        value: "unsafe-none", // Allow popups to communicate freely
+                        value: "unsafe-none",
+                    },
+                ],
+            },
+            {
+                source: "/",
+                headers: [
+                    {
+                        key: "Cross-Origin-Opener-Policy",
+                        value: "unsafe-none",
                     },
                 ],
             },
