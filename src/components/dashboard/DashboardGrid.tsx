@@ -9,12 +9,12 @@ import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 
 // Handle RGL imports for Next.js app directory (avoid ESM/CommonJS mismatch)
-import { Responsive, WidthProvider } from "react-grid-layout";
+import { Responsive, WidthProvider, Layout } from "react-grid-layout";
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
 export function DashboardGrid() {
-    const { widgets, updateLayout, isEditMode } = useDashboardStore();
+    const { widgets, updateLayout, isEditMode, _hasHydrated } = useDashboardStore();
 
     // Transform widgets to RGL layout format
     const layout = useMemo(
@@ -29,10 +29,14 @@ export function DashboardGrid() {
         [widgets]
     );
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const handleLayoutChange = (currentLayout: any[]) => {
+    const handleLayoutChange = (currentLayout: Layout[]) => {
         updateLayout(currentLayout);
     };
+
+    // Prevent FOUC (Flash of Unstyled Content) or empty state flash by waiting for hydration
+    if (!_hasHydrated) {
+        return <div className="w-full min-h-screen bg-background" />; // Or specific skeleton
+    }
 
     if (widgets.length === 0) {
         return (

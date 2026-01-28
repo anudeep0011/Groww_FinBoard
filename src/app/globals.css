@@ -4,57 +4,59 @@
 
 @layer base {
   :root {
-    /* Deep Blended "Groww" Theme */
+    /* Groww Soft & Elegant Theme */
 
-    /* Background: Light Mint/Blue tint (less white) */
-    --background: 180 30% 96%;
-    /* Foreground: Deep Teal/Slate */
-    --foreground: 200 50% 15%;
+    /* App Background: Soft Warm Gray (#F4F7F6) */
+    --background: 160 20% 96%;
+    /* Primary Text: Soft Charcoal (#24312D) */
+    --foreground: 162 15% 17%;
 
-    /* Card: White with slight transparency for blending */
-    --card: 0 0% 100%;
-    --card-foreground: 200 50% 15%;
+    /* Card Background: Off-White (#FAFBFA) */
+    --card: 120 8% 98%;
+    --card-foreground: 162 15% 17%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 200 50% 15%;
+    --popover: 120 8% 98%;
+    --popover-foreground: 162 15% 17%;
 
-    /* Primary: Strong Groww Blue */
-    --primary: 225 80% 55%;
+    /* Primary: Muted Green (#00A884) */
+    --primary: 167 100% 33%;
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary: Strong Groww Green */
-    --secondary: 160 85% 40%;
-    --secondary-foreground: 0 0% 100%;
+    /* Secondary: Soft Surface (#EDF2F0) */
+    --secondary: 156 17% 94%;
+    --secondary-foreground: 162 15% 17%;
 
-    /* Muted: Blended Blue-Green Gray */
-    --muted: 190 30% 94%;
-    --muted-foreground: 200 30% 45%;
+    /* Muted: Inputs/Backgrounds (#EFF4F2) */
+    --muted: 156 17% 95%;
+    /* Muted Text (#8E9C97) */
+    --muted-foreground: 163 8% 58%;
 
-    /* Accent: Vibrant Cyan/Teal for interactions */
-    --accent: 170 60% 94%;
-    --accent-foreground: 160 90% 35%;
+    /* Accent: Soft Gold (#F4C430) - Use sparingly */
+    --accent: 45 90% 57%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* Destructive: Muted Red (#E35D5D) */
+    --destructive: 0 72% 63%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 190 25% 88%;
-    --input: 190 25% 88%;
-    --ring: 225 80% 55%;
+    /* Border: Subtle (#E1E7E4) */
+    --border: 150 14% 89%;
+    --input: 156 17% 95%;
+    --ring: 167 100% 33%;
     --radius: 0.75rem;
 
-    /* Custom Chart colors */
-    --chart-1: 225 80% 55%;
-    /* Blue */
-    --chart-2: 160 85% 40%;
-    /* Green */
-    --chart-3: 180 40% 30%;
-    /* Deep Teal */
+    /* Chart Colors (Muted Professional) */
+    --chart-1: 167 100% 33%;
+    /* Candle Up */
+    --chart-2: 166 50% 36%;
+    /* Line Chart */
+    --chart-3: 0 72% 63%;
+    /* Candle Down */
   }
 
-  /* Pronounced Blue-Green Gradient */
+  /* Clean Background (No Gradient) */
   :root body {
-    background-image: linear-gradient(135deg, hsl(210 60% 95%), hsl(150 50% 94%));
-    background-attachment: fixed;
+    background-image: none;
   }
 
   .dark {
@@ -103,10 +105,12 @@
   }
 }
 
-/* Hide Next.js Dev Indicators/Toasts */
+/* Hide Next.js Dev Indicators/Toasts/Overlays */
 nextjs-portal,
 [data-nextjs-toast],
 [data-nextjs-dialog-overlay],
-#next-route-announcer {
+#next-route-announcer,
+.nextjs-toast-errors-parent,
+div[data-nextjs-toast-wrapper] {
   display: none !important;
 }

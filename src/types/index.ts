@@ -30,17 +30,21 @@ export interface DashboardState {
     isEditMode: boolean;
     theme: "dark" | "light";
     dataSource: "MOCK" | "FINNHUB";
-    apiKey: string;
-    addWidget: (widget: Omit<WidgetConfig, "id" | "layout">) => void;
+    apiKeys: Record<string, string>;
+    apiKey: string; // Deprecated, compatibility for direct access
+    addWidget: (widget: Omit<WidgetConfig, "id" | "layout"> & { id?: string }) => void;
     setDataSource: (source: "MOCK" | "FINNHUB") => void;
-    setApiKey: (key: string) => void;
+    setApiKey: (provider: string, key: string) => void;
+    removeApiKey: (provider: string) => void;
     removeWidget: (id: string) => void;
     updateWidget: (id: string, updates: Partial<WidgetConfig>) => void;
     updateLayout: (layout: LayoutItem[]) => void;
     toggleEditMode: () => void;
     setTheme: (theme: "dark" | "light") => void;
     expandedWidgetId: string | null;
+    editingWidgetId?: string | null;
     toggleWidgetExpansion: (id: string | null) => void;
+    setEditingWidgetId?: (id: string | null) => void;
 
     importDashboard: (state: Partial<DashboardState>) => void;
 }

@@ -1,4 +1,5 @@
 import { StockData, OHLCData } from "./types";
+import { fetchStockData as fetchMockData } from "./mock";
 
 const BASE_URL = "https://finnhub.io/api/v1";
 
@@ -95,7 +96,10 @@ export async function fetchFinnhubData(
                     console.warn("Finnhub returned no data for this range.");
                 }
             } else {
-                if (candleRes.status === 429) {
+                if (candleRes.status === 403) {
+                    console.warn("Finnhub candle access denied (403).");
+                    throw new Error("Historical Data Restricted (403)");
+                } else if (candleRes.status === 429) {
                     console.warn("Rate limit exceeded for candles request.");
                 } else {
                     console.warn(`Finnhub candle fetch failed: ${candleRes.status}`);
@@ -105,7 +109,7 @@ export async function fetchFinnhubData(
             console.warn("Finnhub history fetch failed, returning only quote", err);
         }
 
-        // If history is empty, create a single point from quote to prevent UI crash
+        // If history is still empty (and we didn't fallback), create a single point from quote
         if (history.length === 0) {
             history.push({
                 time: new Date().toLocaleString(),

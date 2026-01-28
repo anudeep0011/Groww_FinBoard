@@ -8,9 +8,15 @@ interface ExtendedDashboardState extends DashboardState {
     activeTemplate: string;
     switchTemplate: (templateId: string, defaultWidgets?: WidgetConfig[]) => void;
 
+    // Widget Editing State
+    editingWidgetId: string | null;
+    setEditingWidgetId: (id: string | null) => void;
+
     // Deprecated but kept for compatibility if needed, though we should remove them
     switchToCustom: () => void;
     switchToPreset: (widgets: WidgetConfig[]) => void;
+    _hasHydrated: boolean;
+    setHasHydrated: (state: boolean) => void;
 }
 
 // Initial Layout Helper
@@ -32,19 +38,34 @@ export const useDashboardStore = create<ExtendedDashboardState>()(
             },
             activeTemplate: 'CUSTOM',
             isEditMode: false,
+            editingWidgetId: null,
+            _hasHydrated: false,
+            setHasHydrated: (state) => set({ _hasHydrated: state }),
             theme: "dark",
-            dataSource: "MOCK",
-            apiKey: process.env.NEXT_PUBLIC_FINNHUB_API_KEY || "",
+            dataSource: "FINNHUB",
+            apiKey: "", // Deprecated
+            apiKeys: {},
 
             setDataSource: (source) => set({ dataSource: source }),
-            setApiKey: (key) => set({ apiKey: key }),
+            setApiKey: (provider, key) => set((state) => ({
+                apiKeys: { ...state.apiKeys, [provider]: key },
+                // Backwards compatibility for now if needed, or just ignore 'apiKey'
+                apiKey: provider === 'FINNHUB' ? key : state.apiKey
+            })),
+            removeApiKey: (provider) => set((state) => {
+                const newKeys = { ...state.apiKeys };
+                delete newKeys[provider];
+                return { apiKeys: newKeys };
+            }),
+
+            setEditingWidgetId: (id) => set({ editingWidgetId: id }),
 
             addWidget: (widget) => {
                 const { widgets } = get();
                 const { x, y } = getNextPosition(widgets);
                 const newWidget: WidgetConfig = {
                     ...widget,
-                    id: uuidv4(), // We will need uuid generic or just Math.random for now to save deps
+                    id: widget.id || uuidv4(), // Allow external ID or generate new
                     layout: {
                         i: "", // set later
                         x,
@@ -168,6 +189,9 @@ export const useDashboardStore = create<ExtendedDashboardState>()(
 
         {
             name: "finboard-storage",
+            onRehydrateStorage: () => (state) => {
+                state?.setHasHydrated(true);
+            },
         }
     )
 );

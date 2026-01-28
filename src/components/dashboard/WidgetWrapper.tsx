@@ -14,8 +14,8 @@ interface WidgetWrapperProps {
 }
 
 export function WidgetWrapper({ widget }: WidgetWrapperProps) {
-    const { removeWidget, isEditMode, toggleWidgetExpansion, expandedWidgetId } = useDashboardStore();
-    const [isConfigOpen, setIsConfigOpen] = useState(false);
+    const { removeWidget, isEditMode, toggleWidgetExpansion, expandedWidgetId, editingWidgetId, setEditingWidgetId } = useDashboardStore();
+    const isConfigOpen = editingWidgetId === widget.id;
     const isExpanded = expandedWidgetId === widget.id;
 
     const Component = WIDGET_REGISTRY[widget.type];
@@ -43,7 +43,7 @@ export function WidgetWrapper({ widget }: WidgetWrapperProps) {
             )}
         >
             {isConfigOpen && (
-                <WidgetConfigModal widgetId={widget.id} onClose={() => setIsConfigOpen(false)} />
+                <WidgetConfigModal widgetId={widget.id} onClose={() => setEditingWidgetId(null)} />
             )}
 
             {/* Header */}
@@ -55,9 +55,7 @@ export function WidgetWrapper({ widget }: WidgetWrapperProps) {
                     <span className="text-sm font-medium truncate text-card-foreground">
                         {widget.title}
                     </span>
-                    {widget.refreshInterval && (
-                        <span className="text-[10px] px-1.5 py-0.5 bg-muted/20 rounded text-muted-foreground">{widget.refreshInterval}s</span>
-                    )}
+
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                     {/* Maximize button removed as click anywhere expands */}
@@ -65,7 +63,7 @@ export function WidgetWrapper({ widget }: WidgetWrapperProps) {
                     {isEditMode && (
                         <>
                             <button
-                                onClick={() => setIsConfigOpen(true)}
+                                onClick={() => setEditingWidgetId(widget.id)}
                                 className="p-1 rounded-md hover:bg-accent/20 hover:text-accent transition-colors"
                                 title="Configure"
                             >

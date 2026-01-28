@@ -4,7 +4,8 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useDashboardStore } from "@/store/useDashboardStore";
-import { X, Save, AlertCircle, Plus, Trash2 } from "lucide-react";
+import { X, Save, AlertCircle, Plus, Trash2, Code, Check, RefreshCw } from "lucide-react";
+import { substituteVariables } from "@/lib/utils";
 
 
 interface WidgetConfigModalProps {
@@ -26,6 +27,9 @@ export function WidgetConfigModal({ widgetId, onClose }: WidgetConfigModalProps)
     // Custom API specific
     const [apiEndpoint, setApiEndpoint] = useState("");
     const [selectedFields, setSelectedFields] = useState("");
+    const [availableFields, setAvailableFields] = useState<string[]>([]);
+    const [isFetchingFields, setIsFetchingFields] = useState(false);
+    const { apiKeys } = useDashboardStore(); // access keys for preview
 
     // Generic Headers State
     const [customHeaders, setCustomHeaders] = useState<{ key: string, value: string }[]>([]);
@@ -235,15 +239,98 @@ export function WidgetConfigModal({ widgetId, onClose }: WidgetConfigModalProps)
                                 </div>
                             </div>
 
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-medium text-muted-foreground">Fields (comma separated)</label>
+
+
+                            {/* Resolved URL Preview */}
+                            {apiEndpoint.includes("{{") && (
+                                <div className="p-2 bg-muted/30 rounded border border-border/50 text-[10px] font-mono break-all text-muted-foreground">
+                                    <span className="font-semibold text-primary">Preview: </span>
+                                    {substituteVariables(apiEndpoint, apiKeys)}
+                                </div>
+                            )}
+
+                            {/* Field Selection Helper */}
+                            <div className="space-y-1.5 pt-2 border-t border-border/30">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-xs font-medium text-muted-foreground">Fields (comma separated)</label>
+                                    <button
+                                        onClick={async () => {
+                                            if (!apiEndpoint) return;
+                                            setIsFetchingFields(true);
+                                            try {
+                                                // Use substituteVariables to get real URL
+                                                const finalUrl = substituteVariables(apiEndpoint, apiKeys);
+                                                let fetchUrl = finalUrl;
+                                                if (finalUrl.includes("stock.indianapi.in")) {
+                                                    fetchUrl = `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
+                                                }
+
+                                                const res = await fetch(fetchUrl);
+                                                if (!res.ok) throw new Error(`Status: ${res.status}`);
+                                                const data = await res.json();
+
+                                                // Flatten keys for suggesting
+                                                const keys: string[] = [];
+                                                const traverse = (obj: unknown, prefix = "") => {
+                                                    if (!obj || typeof obj !== 'object') return;
+                                                    const record = obj as Record<string, unknown>;
+                                                    Object.keys(record).forEach(k => {
+                                                        const displayKey = prefix ? `${prefix}.${k}` : k;
+                                                        // Limit depth/noise
+                                                        if (displayKey.length < 50) keys.push(displayKey);
+                                                        if (typeof record[k] === 'object' && record[k] !== null && !Array.isArray(record[k])) {
+                                                            traverse(record[k], displayKey);
+                                                        }
+                                                    });
+                                                };
+                                                traverse(data);
+                                                // If array, just show "Array" or first item keys
+                                                if (Array.isArray(data) && data.length > 0 && typeof data[0] === 'object') {
+                                                    traverse(data[0], "[0]");
+                                                }
+
+                                                setAvailableFields(keys.slice(0, 30)); // limit suggestions
+                                                setValidationError(""); // clear errors if successful
+                                            } catch (e: unknown) {
+                                                const errorMsg = e instanceof Error ? e.message : String(e);
+                                                setValidationError(`Fetch failed: ${errorMsg}`);
+                                            } finally {
+                                                setIsFetchingFields(false);
+                                            }
+                                        }}
+                                        className="text-[10px] bg-secondary text-secondary-foreground hover:bg-secondary/80 px-2 py-1 rounded flex items-center gap-1 transition-colors"
+                                        title="Fetch API to see available fields"
+                                    >
+                                        {isFetchingFields ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Code className="w-3 h-3" />}
+                                        {isFetchingFields ? "Fetching..." : "Fetch Fields"}
+                                    </button>
+                                </div>
                                 <input
                                     type="text"
                                     value={selectedFields}
                                     onChange={(e) => setSelectedFields(e.target.value)}
-                                    className="w-full h-9 px-3 rounded-md border border-input bg-transparent text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-                                    placeholder="price, volume, change"
+                                    className="w-full h-9 px-3 rounded-md border border-input bg-transparent text-sm focus:outline-none focus:ring-1 focus:ring-primary font-mono"
+                                    placeholder="current_price, high, low"
                                 />
+
+                                {availableFields.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-2 p-2 bg-muted/20 rounded border border-border/30 max-h-32 overflow-y-auto">
+                                        {availableFields.map(f => (
+                                            <button
+                                                key={f}
+                                                onClick={() => {
+                                                    const parts = selectedFields.split(",").map(s => s.trim()).filter(Boolean);
+                                                    if (!parts.includes(f)) {
+                                                        setSelectedFields([...parts, f].join(", "));
+                                                    }
+                                                }}
+                                                className="text-[10px] px-1.5 py-0.5 bg-background border border-border rounded hover:border-primary hover:text-primary transition-colors flex items-center gap-1"
+                                            >
+                                                {f} {selectedFields.includes(f) && <Check className="w-2 h-2" />}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </>
                     )}

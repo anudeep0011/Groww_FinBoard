@@ -22,6 +22,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { AuthProvider } from "@/context/AuthContext";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -32,7 +34,30 @@ export default function RootLayout({
       <body
         className={`antialiased`}
       >
-        {children}
+        <AuthProvider>
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                (function() {
+                    try {
+                    const storage = localStorage.getItem('finboard-storage');
+                    if (storage) {
+                        const parsed = JSON.parse(storage);
+                        if (parsed.state && parsed.state.theme === 'dark') {
+                        document.documentElement.classList.add('dark');
+                        } else {
+                        document.documentElement.classList.remove('dark');
+                        }
+                    }
+                    } catch (e) {
+                    console.error('Theme script error:', e);
+                    }
+                })()
+                `,
+            }}
+          />
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

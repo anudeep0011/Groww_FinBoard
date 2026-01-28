@@ -1,226 +1,255 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import { useStockData } from "@/hooks/useStockData";
-import {
-    AreaChart,
-    Area,
-    XAxis,
-    YAxis,
-    Tooltip,
-    ResponsiveContainer,
-    CartesianGrid,
-    BarChart,
-    Bar,
-    LineChart,
-    Line
-} from "recharts";
-import { Loader2, TrendingUp, TrendingDown } from "lucide-react";
+import { Loader2, TrendingUp, TrendingDown, BarChart2, Activity, LineChart as LineIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { FinancialChart, ChartType } from "./FinancialChart";
+import { Time } from "lightweight-charts";
 
 interface ChartWidgetProps {
     symbol?: string;
     interval?: number;
-    chartType?: "AREA" | "LINE" | "BAR";
+    chartType?: ChartType;
 }
 
-export function ChartWidget({ symbol = "AAPL", chartType = "AREA", isPreview = false }: ChartWidgetProps & { isPreview?: boolean }) {
+export function ChartWidget({ symbol = "AAPL", chartType: initialChartType = "AREA", isPreview = false }: ChartWidgetProps & { isPreview?: boolean }) {
     const [range, setRange] = React.useState<"1D" | "1W" | "1M" | "1Y">("1M");
-    const { stock, isLoading, isError, mutate } = useStockData(symbol, range, isPreview ? 0 : 15000); // Disable auto-refresh in preview to save API calls? Or keep it slow.
+    const [activeChartType, setActiveChartType] = React.useState<ChartType>(initialChartType);
+    // Local state for key input
+    const [tempKey, setTempKey] = React.useState("");
+
+    // Only fetch automatically if not in preview (or slow refresh)
+    const { stock, isLoading, isError, mutate } = useStockData(symbol, range, isPreview ? 0 : 15000);
 
     // Calculate dynamic color based on live change
     const isPositive = stock ? stock.change >= 0 : true;
-    const color = isPositive ? "var(--accent)" : "var(--destructive)";
+    const color = isPositive ? "#00A884" : "#E35D5D"; // Muted Green : Muted Red
+
+    // Prepare Data for Lightweight Charts
+    const { chartData, volumeData } = useMemo(() => {
+        if (!stock || !stock.history) return { chartData: [], volumeData: [] };
+
+        // Sort by time is critical for lightweight-charts
+        const sortedHistory = [...stock.history].sort((a, b) =>
+            new Date(a.time).getTime() - new Date(b.time).getTime()
+        );
+
+        const cData = sortedHistory.map(d => {
+            const time = Math.floor(new Date(d.time).getTime() / 1000); // Unix Timestamp (seconds)
+            return {
+                time: time as Time, // Cast to Time type
+                open: d.open,
+                high: d.high,
+                low: d.low,
+                close: d.close,
+                value: d.close, // For Line/Area
+            };
+        });
+
+        // Unique timestamps are required. Filter duplicates if any.
+        const uniqueData = cData.filter((item, index, self) =>
+            index === self.findIndex((t) => t.time === item.time)
+        );
+
+        const vData = sortedHistory.map((d, i) => {
+            const time = Math.floor(new Date(d.time).getTime() / 1000);
+            const isUp = d.close >= d.open;
+            return {
+                time: time as Time,
+                value: d.volume,
+                color: isUp ? '#BDE8DC' : '#F0C1C1', // Volume Up (Soft Green) : Volume Down (Soft Red)
+            };
+        }).filter((item, index, self) =>
+            index === self.findIndex((t) => t.time === item.time)
+        );
+
+        return { chartData: uniqueData, volumeData: vData };
+    }, [stock]);
 
     // Loading/Error States
     if (isLoading && !stock) {
         return (
-            <div className="flex h-full items-center justify-center text-muted-foreground">
-                <Loader2 className="animate-spin w-6 h-6" />
+            <div className="flex h-full items-center justify-center text-muted-foreground bg-card/10">
+                <Loader2 className="animate-spin w-5 h-5" />
             </div>
         );
     }
 
+
+
+    // Error State with "Enter Key" Prompt
     if (isError || !stock) {
         return (
-            <div className="flex h-full items-center justify-center flex-col text-destructive p-4 text-center">
-                <span className="font-bold">Error</span>
-                <span className="text-xs text-muted-foreground">Check API Key or Limits</span>
+            <div className="flex h-full items-center justify-center flex-col p-6 text-center bg-card/10 space-y-3">
+                <div className="space-y-1">
+                    <span className="font-bold text-sm text-destructive flex items-center justify-center gap-2">
+                        <Activity className="w-4 h-4" /> Connect Data
+                    </span>
+                    <p className="text-[10px] text-muted-foreground max-w-[200px] leading-tight mx-auto">
+                        Real-time data requires your own Finnhub API Key.
+                    </p>
+                </div>
+
+                {/* API Key Input Form */}
+                <div className="w-full max-w-[200px] space-y-2">
+                    <input
+                        type="text"
+                        placeholder="Paste Finnhub Key..."
+                        value={tempKey}
+                        onChange={(e) => setTempKey(e.target.value)}
+                        className="w-full h-8 text-xs px-2 rounded-md border border-border bg-background focus:ring-1 focus:ring-primary outline-none"
+                    />
+                    <button
+                        onClick={() => {
+                            if (!tempKey) return;
+                            import("@/store/useDashboardStore").then(({ useDashboardStore }) => {
+                                useDashboardStore.getState().setDataSource("FINNHUB");
+                                useDashboardStore.getState().setApiKey("FINNHUB", tempKey);
+                                window.location.reload();
+                            });
+                        }}
+                        disabled={!tempKey}
+                        className="w-full py-1.5 text-xs bg-primary text-primary-foreground hover:bg-primary/90 rounded-md transition-colors font-medium disabled:opacity-50"
+                    >
+                        Save & Connect
+                    </button>
+
+                    <a
+                        href={`https://finnhub.io/dashboard`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center justify-center w-full py-1.5 text-xs bg-secondary hover:bg-secondary/80 rounded-md transition-colors font-medium text-secondary-foreground gap-1"
+                    >
+                        Get Free Key <span className="opacity-70">↗</span>
+                    </a>
+                </div>
             </div>
         );
     }
 
-    // PREVIEW MODE: Sparkline only
+    // PREVIEW MODE: Simplified Chart
     if (isPreview) {
         return (
-            <div className="h-full w-full relative bg-background/5">
-                <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={stock.history}>
-                        <defs>
-                            <linearGradient id={`grad-${symbol}`} x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor={color} stopOpacity={0.4} />
-                                <stop offset="100%" stopColor={color} stopOpacity={0} />
-                            </linearGradient>
-                        </defs>
-                        <Area
-                            type="monotone"
-                            dataKey="close"
-                            stroke={color}
-                            fill={`url(#grad-${symbol})`}
-                            strokeWidth={1.5}
-                            isAnimationActive={false}
-                        />
-                    </AreaChart>
-                </ResponsiveContainer>
-                <div className="absolute top-2 left-3">
-                    <div className="text-lg font-bold">{stock.currency === 'USD' ? '$' : '₹'}{stock.price.toFixed(2)}</div>
+            <div className="h-full w-full relative bg-background/5 overflow-hidden flex flex-col pointer-events-none select-none">
+                <div className="absolute top-3 left-4 z-10">
+                    <div className="text-lg font-bold tracking-tight">{stock.currency === 'USD' ? '$' : '₹'}{stock.price.toFixed(2)}</div>
                     <span className={cn("text-xs font-medium", isPositive ? "text-accent" : "text-destructive")}>
                         {isPositive ? "+" : ""}{stock.changePercent.toFixed(2)}%
                     </span>
                 </div>
+                <div className="flex-1 opacity-80">
+                    {/* Use Area chart for preview, no volume */}
+                    <FinancialChart
+                        data={chartData}
+                        chartType="AREA"
+                        colors={{
+                            lineColor: color,
+                            areaTopColor: isPositive ? "rgba(34, 197, 94, 0.2)" : "rgba(239, 68, 68, 0.2)",
+                            areaBottomColor: "transparent"
+                        }}
+                    />
+                </div>
             </div>
         );
     }
 
-    // EXPANDED MODE: Full Chart
+    // EXPANDED MODE: Full Trading Interface
     return (
-        <div className="h-full flex flex-col p-6 bg-background">
-            {/* Header / Controls */}
-            <div className="flex flex-wrap items-center justify-between mb-6 gap-4">
-                <div className="flex flex-col">
-                    <div className="flex items-baseline gap-3">
-                        <h3 className="text-4xl font-bold tracking-tight text-foreground">{stock.currency === 'USD' ? '$' : '₹'}{stock.price.toFixed(2)}</h3>
-                        <span className={cn("text-lg font-semibold px-2 py-0.5 rounded flex items-center gap-1", {
-                            "text-accent bg-accent/10": isPositive,
-                            "text-destructive bg-destructive/10": !isPositive
-                        })}>
-                            {isPositive ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
-                            {stock.change.toFixed(2)} ({stock.changePercent.toFixed(2)}%)
-                        </span>
-                        <button
-                            onClick={() => mutate()}
-                            disabled={isLoading}
-                            className="ml-2 p-1.5 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                            title="Refresh Data"
-                        >
-                            <Loader2 className={cn("w-4 h-4", isLoading ? "animate-spin" : "")} />
-                        </button>
-                    </div>
-                    <div className="text-sm text-muted-foreground font-medium mt-1">
-                        {symbol} • {range === '1D' ? 'Live Market' : 'Historical Data'}
-                    </div>
-                </div>
-
-                {/* Range Switcher */}
-                <div className="flex bg-muted/30 rounded-lg p-1 gap-1">
-                    {(["1D", "1W", "1M", "1Y"] as const).map(r => (
-                        <button
-                            key={r}
-                            onClick={() => setRange(r)}
-                            className={cn(
-                                "px-3 py-1 text-sm font-medium rounded-md transition-all",
-                                range === r ? "bg-background text-foreground shadow-sm ring-1 ring-border/50" : "text-muted-foreground hover:text-foreground hover:bg-background/50"
-                            )}
-                        >
-                            {r}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            <div className="flex-1 w-full min-h-0 relative border border-border/30 rounded-xl bg-card/20 p-2 overflow-hidden">
-                <ResponsiveContainer width="100%" height="100%">
-                    {stock.history.length === 0 ? (
-                        <div className="flex h-full items-center justify-center text-muted-foreground text-xs flex-col">
-                            <span className="opacity-50 text-3xl mb-2">📉</span>
-                            No Data Available
+        <div className="h-full flex flex-col p-4 bg-background backdrop-blur-sm">
+            {/* Header */}
+            <div className="flex flex-wrap items-center justify-between mb-4 gap-2">
+                <div className="flex items-center gap-4">
+                    <div>
+                        <div className="flex items-baseline gap-2">
+                            <h3 className="text-3xl font-bold text-foreground tracking-tight">
+                                {Number(stock.price).toLocaleString('en-US', { style: 'currency', currency: stock.currency })}
+                            </h3>
+                            <button onClick={() => mutate()} title="Refresh" className="p-1 hover:bg-muted rounded-full">
+                                <span className={cn("flex h-2 w-2 relative", isLoading ? "opacity-100" : "opacity-0 transition-opacity duration-1000")}>
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-accent"></span>
+                                </span>
+                            </button>
                         </div>
-                    ) : chartType === "BAR" ? (
-                        <BarChart data={stock.history}>
-                            <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.1} />
-                            <XAxis dataKey="time" hide={true} />
-                            <YAxis domain={['auto', 'auto']} orientation="right" tick={{ fontSize: 10, fill: '#888' }} axisLine={false} tickLine={false} />
-                            <Tooltip
-                                contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}
-                                itemStyle={{ color: 'hsl(var(--foreground))' }}
-                                labelStyle={{ color: 'hsl(var(--muted-foreground))', marginBottom: '0.25rem' }}
-                                cursor={{ fill: 'hsl(var(--muted)/0.2)' }}
-                            />
-                            <Bar dataKey="close" fill={color} radius={[2, 2, 0, 0]} />
-                        </BarChart>
-                    ) : chartType === "LINE" ? (
-                        <LineChart data={stock.history}>
-                            <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.1} />
-                            <XAxis dataKey="time" hide={true} />
-                            <YAxis domain={['auto', 'auto']} orientation="right" tick={{ fontSize: 10, fill: '#888' }} axisLine={false} tickLine={false} />
-                            <Tooltip
-                                contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}
-                                itemStyle={{ color: 'hsl(var(--foreground))' }}
-                                labelStyle={{ color: 'hsl(var(--muted-foreground))', marginBottom: '0.25rem' }}
-                                cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '4 4' }}
-                            />
-                            <Line type="monotone" dataKey="close" stroke={color} strokeWidth={2} dot={false} />
-                        </LineChart>
-                    ) : (
-                        <AreaChart data={stock.history}>
-                            <defs>
-                                <linearGradient id="colorValueFull" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor={color} stopOpacity={0.3} />
-                                    <stop offset="95%" stopColor={color} stopOpacity={0} />
-                                </linearGradient>
-                            </defs>
-                            <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.1} />
-                            <XAxis
-                                dataKey="time"
-                                minTickGap={30}
-                                tickFormatter={(val) => {
-                                    // Simple formatter based on range
-                                    if (range === '1D') return val.split(',')[1]?.trim().slice(0, 5) || val;
-                                    return val.split(',')[0];
-                                }}
-                                tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                                axisLine={false}
-                                tickLine={false}
-                                dy={10}
-                            />
-                            <YAxis
-                                domain={['auto', 'auto']}
-                                orientation="right"
-                                tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                                axisLine={false}
-                                tickLine={false}
-                                dx={-5}
-                            />
-                            <Tooltip
-                                contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}
-                                itemStyle={{ color: 'hsl(var(--foreground))' }}
-                                labelStyle={{ color: 'hsl(var(--muted-foreground))', marginBottom: '0.25rem' }}
-                                cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '4 4' }}
-                            />
-                            <Area
-                                type="monotone"
-                                dataKey="close"
-                                stroke={color}
-                                fillOpacity={1}
-                                fill="url(#colorValueFull)"
-                                strokeWidth={2}
-                            />
-                        </AreaChart>
-                    )}
-                </ResponsiveContainer>
+                        <div className="flex items-center gap-2 text-sm mt-0.5">
+                            <span className={cn("font-medium flex items-center gap-1", isPositive ? "text-accent" : "text-destructive")}>
+                                {isPositive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                                {stock.change > 0 ? "+" : ""}{stock.change.toFixed(2)} ({stock.changePercent.toFixed(2)}%)
+                            </span>
+                            <span className="text-muted-foreground text-xs">• {range}</span>
+                        </div>
+                    </div>
+                </div>
 
-                {/* Live Status Indicator */}
-                <div className="absolute top-4 left-4 flex items-center gap-2">
-                    <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-accent"></span>
-                    </span>
-                    <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest">Live Market</span>
+                {/* Controls Group */}
+                <div className="flex items-center gap-2">
+                    {/* Range Switcher */}
+                    <div className="flex bg-muted/40 p-0.5 rounded-lg border border-border/40">
+                        {(["1D", "1W", "1M", "1Y"] as const).map(r => (
+                            <button
+                                key={r}
+                                onClick={() => setRange(r)}
+                                className={cn(
+                                    "px-2.5 py-1 text-[10px] font-semibold rounded-md transition-all",
+                                    range === r ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                                )}
+                            >
+                                {r}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Chart Type Switcher */}
+                    <div className="flex bg-muted/40 p-0.5 rounded-lg border border-border/40">
+                        <button
+                            onClick={() => setActiveChartType("CANDLE")}
+                            className={cn("p-1.5 rounded-md transition-all", activeChartType === "CANDLE" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}
+                            title="Candles"
+                        >
+                            <BarChart2 className="w-3.5 h-3.5 rotate-90" />
+                        </button>
+                        <button
+                            onClick={() => setActiveChartType("AREA")}
+                            className={cn("p-1.5 rounded-md transition-all", activeChartType === "AREA" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}
+                            title="Area"
+                        >
+                            <Activity className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                            onClick={() => setActiveChartType("LINE")}
+                            className={cn("p-1.5 rounded-md transition-all", activeChartType === "LINE" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}
+                            title="Line"
+                        >
+                            <LineIcon className="w-3.5 h-3.5" />
+                        </button>
+                    </div>
                 </div>
             </div>
-            <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground px-1">
-                <span>Data provided by Finnhub API</span>
-                <span>Last updated: {new Date().toLocaleTimeString()}</span>
+
+            {/* Chart Area */}
+            <div className="flex-1 w-full min-h-0 border border-border/40 rounded-lg overflow-hidden relative shadow-inner bg-card/20">
+                {chartData.length > 0 ? (
+                    <FinancialChart
+                        data={chartData}
+                        volume={volumeData}
+                        chartType={activeChartType}
+                        colors={{
+                            backgroundColor: "transparent",
+                            textColor: "#8E9C97", // Muted Text
+                            lineColor: "#2E8B75", // Line Chart Teak
+                            upColor: "#00A884",   // Candle Up
+                            downColor: "#E35D5D", // Candle Down
+                            areaTopColor: isPositive ? "rgba(0, 168, 132, 0.25)" : "rgba(227, 93, 93, 0.25)",
+                            areaBottomColor: "rgba(0, 0, 0, 0)"
+                        }}
+                    />
+                ) : (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground opacity-50">
+                        <Activity className="w-10 h-10 mb-2" />
+                        <span className="text-xs">Waiting for data...</span>
+                    </div>
+                )}
             </div>
         </div>
     );

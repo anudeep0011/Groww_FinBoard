@@ -3,7 +3,7 @@
 import React from "react";
 import useSWR from "swr";
 import { Loader2, AlertCircle, RefreshCw } from "lucide-react";
-import { flattenObject } from "@/lib/jsonUtils";
+import { getNestedValue } from "@/lib/jsonUtils";
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -16,7 +16,8 @@ import {
     Filler,
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
-import { cn } from "@/lib/utils";
+import { cn, substituteVariables } from "@/lib/utils";
+import { useDashboardStore } from "@/store/useDashboardStore";
 
 ChartJS.register(
     CategoryScale,
@@ -95,18 +96,41 @@ const fetcher = async ([url, headers]: [string, Record<string, string> | undefin
     return data;
 };
 
+// Helper: Substitute {{KEY}} with values from apiKeys
+
 export function CustomApiWidget({ apiUrl, refreshInterval = 30, selectedFields = [], displayMode = "CARD", headers }: CustomApiWidgetProps & { headers?: Record<string, string> }) {
-    const { data, error, isLoading, mutate } = useSWR(apiUrl ? [apiUrl, headers] : null, fetcher, {
+    const { apiKeys } = useDashboardStore();
+
+    // Perform substitution
+    const finalApiUrl = React.useMemo(() => substituteVariables(apiUrl || "", apiKeys), [apiUrl, apiKeys]);
+
+    // Substitute headers if they exist
+    const finalHeaders = React.useMemo(() => {
+        if (!headers) return undefined;
+        const newHeaders: Record<string, string> = {};
+        Object.entries(headers).forEach(([k, v]) => {
+            newHeaders[k] = substituteVariables(v, apiKeys);
+        });
+        return newHeaders;
+    }, [headers, apiKeys]);
+
+    // Check if URL has missing token/key parameters (common 401 cause)
+    // Matches "token=" or "apikey=" followed by & or end of string
+    const isMissingToken = React.useMemo(() => {
+        if (!finalApiUrl) return false;
+        return /[?&](token|apikey)=(&|$)/i.test(finalApiUrl);
+    }, [finalApiUrl]);
+
+    // Don't fetch if token is missing to avoid 401s
+    const shouldFetch = finalApiUrl && !isMissingToken;
+
+    const { data, error, isLoading, mutate } = useSWR(shouldFetch ? [finalApiUrl, finalHeaders] : null, fetcher, {
         refreshInterval: refreshInterval * 1000,
         shouldRetryOnError: false,
     });
 
     // Process Data
-    const flattenedData = React.useMemo(() => data ? flattenObject(data) : {}, [data]);
 
-    const displayData = selectedFields.length > 0
-        ? selectedFields.map(field => ({ label: field, value: flattenedData[field] }))
-        : [{ label: "Raw Data", value: JSON.stringify(data).slice(0, 100) + "..." }];
 
     if (!apiUrl) {
         return (
@@ -115,6 +139,19 @@ export function CustomApiWidget({ apiUrl, refreshInterval = 30, selectedFields =
                 <p className="text-sm">No API URL configured.</p>
             </div>
         );
+    }
+
+    if (isMissingToken) {
+        return (
+            <div className="flex flex-col items-center justify-center h-full p-4 text-amber-500 text-center">
+                <AlertCircle className="w-8 h-8 mb-2" />
+                <p className="text-sm font-medium">Missing API Key</p>
+                <p className="text-[10px] opacity-80 mt-1">
+                    URL contains empty token.<br />
+                    Check your API Key settings.
+                </p>
+            </div>
+        )
     }
 
     if (isLoading && !data) {
@@ -136,6 +173,11 @@ export function CustomApiWidget({ apiUrl, refreshInterval = 30, selectedFields =
         );
     }
 
+
+    // Process Data
+    const displayData = selectedFields.length > 0
+        ? selectedFields.map(field => ({ label: field, value: getNestedValue(data, field) }))
+        : [{ label: "Raw Data", value: (JSON.stringify(data) || "").slice(0, 100) + "..." }];
 
     // Helper to format values
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
